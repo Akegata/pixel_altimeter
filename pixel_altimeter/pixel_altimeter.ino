@@ -8,7 +8,8 @@
 Adafruit_BMP085 bmp;
 
 #define PIN 2
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, PIN, NEO_GRB + NEO_KHZ800);
+int num_leds = 2; // Specified how many LEDs are in the array.
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(num_leds, PIN);
 
 // Define different colors for easier use.
 uint32_t blue      = strip.Color(0, 0, 255);
@@ -21,7 +22,6 @@ uint32_t white_dim = strip.Color(20, 20, 20);
 uint32_t yellow    = strip.Color(255, 255, 0);
 uint32_t off       = strip.Color(0, 0, 0);
 
-int num_leds            = 4;    // Set number of LEDs
 int powercycles         = 0;
 int powercycles_updated = 0;
 int startup             = 0;
@@ -41,11 +41,11 @@ struct MyObject {
 // Sets the specified numbers of LEDs to the specifiedcolor.
 int setLEDColors(int nr_leds, uint32_t color) {
   if (current_color != color) {
-    for (uint16_t i = 0; i < nr_leds; i++) {
-     strip.setPixelColor(i, off);
+    for (int i = 0; i < nr_leds; i++) {
+      strip.setPixelColor(i, off);
     }
     strip.show();
-    for (uint16_t i = 0; i < nr_leds; i++) {
+    for (int16_t i = 0; i < nr_leds; i++) {
       strip.setPixelColor(i, color);
     }
     strip.show();
@@ -87,7 +87,7 @@ void setup() {
     Serial.println("Could not find a valid BMP085 sensor, check wiring!");
     while (1) {}
   }
-  
+
   strip.begin();
   strip.show();
 }
@@ -106,13 +106,11 @@ void loop() {
     Serial.print("Baseline set");
     powercycles_updated = 1;
   }
-
   // Update the powercycle count.
   else if (powercycles_updated == 0) {
     powercycles = (calibrate + 1);
     EEPROM.write(0, powercycles);
     powercycles_updated = 1;
-
     cycleLEDColors(num_leds, blue, 200);
     delay(2000);
   }
@@ -120,7 +118,6 @@ void loop() {
   // Reset the power cycle count and read the baseline from EEPROM.
   powercycles = (0);
   EEPROM.write(0, powercycles);
-  setLEDColors(num_leds, off);
   EEPROM.get(baseline_address, read_baseline);
 
   Serial.print("Baseline pressure = ");
@@ -132,7 +129,7 @@ void loop() {
 
   // Blink LED's green tbree times to indicate that the altimeter is running.
   if (startup == 0) { // Violet through all LEDs on startup. Sets startup variable to 1.
-    while(blink < 3){
+    while (blink < 3) {
       blinkLEDColors(num_leds, green, 100, 100);
       blink++;
     }
@@ -144,22 +141,22 @@ void loop() {
   if (agl > 3500) {
     setLEDColors(num_leds, blue);
   }
-  else if (agl < 3500 && agl > 3000) {
+  else if (agl < 3500 && agl >= 3000) {
     blinkLEDColors(num_leds, blue, 800, 800);
   }
-  else if (agl < 3000 && agl > 2500) {
+  else if (agl < 3000 && agl >= 2500) {
     setLEDColors(num_leds, green);
   }
-  else if (agl < 2500 && agl > 2000) {
+  else if (agl < 2500 && agl >= 2000) {
     blinkLEDColors(num_leds, green, 800, 800);
   }
-  else if (agl < 2000 && agl > 1500) {
+  else if (agl < 2000 && agl >= 1500) {
     setLEDColors(num_leds, yellow);
   }
-  else if (agl < 1500 && agl > 1000) {
+  else if (agl < 1500 && agl >= 1000) {
     setLEDColors(num_leds, red);
   }
-  else if (agl < 1000 && agl > 500) {
+  else if (agl < 1000 && agl >= 500) {
     blinkLEDColors(num_leds, red, 300, 300);
   }
 }
