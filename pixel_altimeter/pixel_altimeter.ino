@@ -26,6 +26,7 @@ int powercycles         = 0;
 int powercycles_updated = 0;
 int startup             = 0;
 int blink               = 0;
+int agl                 = 0;
 int current_color;
 
 // Address in the EEPROM where the baseline reading should be stored.
@@ -90,13 +91,11 @@ void setup() {
 
   strip.begin();
   strip.show();
-}
 
-void loop() {
   MyObject read_baseline;
   EEPROM.get(baseline_address, read_baseline);
   int calibrate = (EEPROM.read(0));
-  int agl = bmp.readAltitude() - read_baseline.field1;
+  agl = bmp.readAltitude() - read_baseline.field1;
 
   // On the third power cycle, reset the calibration
   if (calibrate == 2) {
@@ -118,7 +117,6 @@ void loop() {
   // Reset the power cycle count and read the baseline from EEPROM.
   powercycles = (0);
   EEPROM.write(0, powercycles);
-  EEPROM.get(baseline_address, read_baseline);
 
   Serial.print("Baseline pressure = ");
   Serial.print(read_baseline.field1);
@@ -136,6 +134,48 @@ void loop() {
     blink = 0;
     startup = 1;
   }
+
+  // On the third power cycle, reset the calibration
+  if (calibrate == 2) {
+    baseline = bmp.readAltitude();
+    blinkLEDColors(num_leds, red, 500, 500);
+    EEPROM.put(baseline_address, baseline);
+    Serial.print("Baseline set");
+    powercycles_updated = 1;
+  }
+  // Update the powercycle count.
+  else if (powercycles_updated == 0) {
+    powercycles = (calibrate + 1);
+    EEPROM.write(0, powercycles);
+    powercycles_updated = 1;
+    cycleLEDColors(num_leds, blue, 200);
+    delay(2000);
+  }
+
+  // Reset the power cycle count and read the baseline from EEPROM.
+  powercycles = (0);
+  EEPROM.write(0, powercycles);
+
+  Serial.print("Baseline pressure = ");
+  Serial.print(read_baseline.field1);
+  Serial.print(". Current pressure = ");
+  Serial.print(bmp.readAltitude());
+  Serial.print(". agl = ");
+  Serial.println(agl);
+
+  // Blink LED's green tbree times to indicate that the altimeter is running.
+  if (startup == 0) { // Violet through all LEDs on startup. Sets startup variable to 1.
+    while (blink < 3) {
+      blinkLEDColors(num_leds, green, 100, 100);
+      blink++;
+    }
+    blink = 0;
+    startup = 1;
+  }
+}
+
+void loop() {
+  agl = bmp.readAltitude() - read_baseline.field1;
 
   // Light up or blink the LEDs in different patterns depending on altitude.
   if (agl > 3500) {
