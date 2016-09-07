@@ -23,11 +23,10 @@ uint32_t yellow    = strip.Color(255, 255, 0);
 uint32_t off       = strip.Color(0, 0, 0);
 
 int powercycles         = 0;
-int powercycles_updated = 0;
 int startup             = 0;
 int agl                 = 0;
+int baseline_address    = 1; // Address in the EEPROM where the baseline reading should be stored.
 int current_color;
-int baseline_address = 1; // Address in the EEPROM where the baseline reading should be stored.
 double baseline;
 
 struct MyObject {
@@ -72,6 +71,7 @@ int blinkLEDColors(int nr_leds, uint32_t color, int on_time, int off_time) {
   }
   strip.show();
   delay(on_time);
+
   for (uint16_t i = 0; i < nr_leds; i++) {
     strip.setPixelColor(i, off);
   }
@@ -90,24 +90,20 @@ void setup() {
   strip.begin();
   strip.show();
 
-  MyObject read_baseline;
   EEPROM.get(baseline_address, read_baseline);
-  int calibrate = (EEPROM.read(0));
-  agl = bmp.readAltitude() - read_baseline.field1;
+  powercycles = (EEPROM.read(0));
 
   // On the third power cycle, reset the calibration
-  if (calibrate == 2) {
+  if (powercycles == 2) {
     baseline = bmp.readAltitude();
-    blinkLEDColors(num_leds, red, 500, 500);
     EEPROM.put(baseline_address, baseline);
     Serial.print("Baseline set");
-    powercycles_updated = 1;
+    blinkLEDColors(num_leds, red, 500, 500);
   }
   // Update the powercycle count.
-  else if (powercycles_updated == 0) {
-    powercycles = (calibrate + 1);
+  else {
+    powercycles = (powercycles + 1);
     EEPROM.write(0, powercycles);
-    powercycles_updated = 1;
     cycleLEDColors(num_leds, blue, 200);
     delay(2000);
   }
@@ -116,49 +112,21 @@ void setup() {
   powercycles = (0);
   EEPROM.write(0, powercycles);
 
-  Serial.print("Baseline pressure = ");
-  Serial.print(read_baseline.field1);
-  Serial.print(". Current pressure = ");
-  Serial.print(bmp.readAltitude());
-  Serial.print(". agl = ");
-  Serial.println(agl);
 
   // Blink LED's green tbree times to indicate that the altimeter is running.
   blinkLEDColors(num_leds, green, 100, 100);
 
-  // On the third power cycle, reset the calibration
-  if (calibrate == 2) {
-    baseline = bmp.readAltitude();
-    blinkLEDColors(num_leds, red, 500, 500);
-    EEPROM.put(baseline_address, baseline);
-    Serial.print("Baseline set");
-    powercycles_updated = 1;
-  }
-  // Update the powercycle count.
-  else if (powercycles_updated == 0) {
-    powercycles = (calibrate + 1);
-    EEPROM.write(0, powercycles);
-    powercycles_updated = 1;
-    cycleLEDColors(num_leds, blue, 200);
-    delay(2000);
-  }
+}
 
-  // Reset the power cycle count and read the baseline from EEPROM.
-  powercycles = (0);
-  EEPROM.write(0, powercycles);
-
+void loop() {
+  agl = bmp.readAltitude() - read_baseline.field1;
+  
   Serial.print("Baseline pressure = ");
   Serial.print(read_baseline.field1);
   Serial.print(". Current pressure = ");
   Serial.print(bmp.readAltitude());
   Serial.print(". agl = ");
   Serial.println(agl);
-
-  blinkLEDColors(num_leds, green, 100, 100);
-}
-
-void loop() {
-  agl = bmp.readAltitude() - read_baseline.field1;
 
   // Light up or blink the LEDs in different patterns depending on altitude.
   if (agl > 3500) {
