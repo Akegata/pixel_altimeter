@@ -22,11 +22,12 @@ uint32_t white_dim = strip.Color(20, 20, 20);
 uint32_t yellow    = strip.Color(255, 255, 0);
 uint32_t off       = strip.Color(0, 0, 0);
 
-int powercycles         = 0;
-int startup             = 0;
 int agl                 = 0;
 int baseline_address    = 1; // Address in the EEPROM where the baseline reading should be stored.
+int powercycles_address = 0;
+int startup             = 0;
 int current_color;
+int powercycles;
 double baseline;
 
 struct MyObject {
@@ -80,30 +81,23 @@ int blinkLEDColors(int nr_leds, uint32_t color, int on_time, int off_time) {
 }
 
 void setup() {
-  Serial.begin(9600);
-
-  if (!bmp.begin()) {
-    Serial.println("Could not find a valid BMP085 sensor, check wiring!");
-    while (1) {}
-  }
-
+ 
   strip.begin();
   strip.show();
 
-  EEPROM.get(baseline_address, read_baseline);
-  powercycles = (EEPROM.read(0));
+  powercycles = (EEPROM.read(powercycles_address));
 
   // On the third power cycle, reset the calibration
   if (powercycles == 2) {
     baseline = bmp.readAltitude();
     EEPROM.put(baseline_address, baseline);
-    Serial.print("Baseline set");
+
     blinkLEDColors(num_leds, red, 500, 500);
   }
   // Update the powercycle count.
   else {
-    powercycles = (powercycles + 1);
-    EEPROM.write(0, powercycles);
+    powercycles++;
+    EEPROM.write(powercycles_address, powercycles);
     cycleLEDColors(num_leds, blue, 200);
     delay(2000);
   }
@@ -111,6 +105,7 @@ void setup() {
   // Reset the power cycle count and read the baseline from EEPROM.
   powercycles = (0);
   EEPROM.write(0, powercycles);
+  EEPROM.get(baseline_address, read_baseline);
 
 
   // Blink LED's green tbree times to indicate that the altimeter is running.
@@ -120,13 +115,7 @@ void setup() {
 
 void loop() {
   agl = bmp.readAltitude() - read_baseline.field1;
-  
-  Serial.print("Baseline pressure = ");
-  Serial.print(read_baseline.field1);
-  Serial.print(". Current pressure = ");
-  Serial.print(bmp.readAltitude());
-  Serial.print(". agl = ");
-  Serial.println(agl);
+
 
   // Light up or blink the LEDs in different patterns depending on altitude.
   if (agl > 3500) {
