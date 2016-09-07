@@ -25,12 +25,9 @@ uint32_t off       = strip.Color(0, 0, 0);
 int powercycles         = 0;
 int powercycles_updated = 0;
 int startup             = 0;
-int blink               = 0;
 int agl                 = 0;
 int current_color;
-
-// Address in the EEPROM where the baseline reading should be stored.
-int baseline_address = 1;
+int baseline_address = 1; // Address in the EEPROM where the baseline reading should be stored.
 double baseline;
 
 struct MyObject {
@@ -38,6 +35,7 @@ struct MyObject {
   byte field2;
   char name[10];
 };
+MyObject read_baseline;
 
 // Sets the specified numbers of LEDs to the specifiedcolor.
 int setLEDColors(int nr_leds, uint32_t color) {
@@ -126,14 +124,7 @@ void setup() {
   Serial.println(agl);
 
   // Blink LED's green tbree times to indicate that the altimeter is running.
-  if (startup == 0) { // Violet through all LEDs on startup. Sets startup variable to 1.
-    while (blink < 3) {
-      blinkLEDColors(num_leds, green, 100, 100);
-      blink++;
-    }
-    blink = 0;
-    startup = 1;
-  }
+  blinkLEDColors(num_leds, green, 100, 100);
 
   // On the third power cycle, reset the calibration
   if (calibrate == 2) {
@@ -163,15 +154,7 @@ void setup() {
   Serial.print(". agl = ");
   Serial.println(agl);
 
-  // Blink LED's green tbree times to indicate that the altimeter is running.
-  if (startup == 0) { // Violet through all LEDs on startup. Sets startup variable to 1.
-    while (blink < 3) {
-      blinkLEDColors(num_leds, green, 100, 100);
-      blink++;
-    }
-    blink = 0;
-    startup = 1;
-  }
+  blinkLEDColors(num_leds, green, 100, 100);
 }
 
 void loop() {
