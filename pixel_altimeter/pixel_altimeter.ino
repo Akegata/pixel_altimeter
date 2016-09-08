@@ -1,4 +1,7 @@
 // LED Skydive Altimeter by Martin Hovmöller
+// To do:
+// 1) Detect descent, don't light up LEDs on ascent.
+// 2) Deep sleep power mode.
 
 #include <EEPROM.h>
 #include <Wire.h>
@@ -26,7 +29,6 @@ int agl                 = 0;
 int baseline_address    = 1; // Address in the EEPROM where the baseline reading should be stored.
 int powercycles_address = 0;
 int startup             = 0;
-int current_color;
 int powercycles;
 double baseline;
 
@@ -39,20 +41,14 @@ MyObject read_baseline;
 
 // Sets the specified numbers of LEDs to the specifiedcolor.
 int setLEDColors(int nr_leds, uint32_t color) {
-  if (current_color != color) {
-    for (int i = 0; i < nr_leds; i++) {
-      strip.setPixelColor(i, off);
-    }
-    strip.show();
-    for (int16_t i = 0; i < nr_leds; i++) {
-      strip.setPixelColor(i, color);
-    }
-    strip.show();
-    current_color = color;
+  for (int i = 0; i < nr_leds; i++) {
+    strip.setPixelColor(i, off);
   }
+  strip.show();
 }
 
 // Cycles through the LED's, only lighting up one LED at a time.
+// If we're only using one LED, this can be scrapped for minimal code size.
 int cycleLEDColors(int nr_leds, uint32_t color, int cycle_time) {
   setLEDColors(num_leds, off);
   for (uint16_t i = 0; i < nr_leds; i++) {
@@ -107,17 +103,14 @@ void setup() {
   EEPROM.write(0, powercycles);
   EEPROM.get(baseline_address, read_baseline);
 
-
-  // Blink LED's green tbree times to indicate that the altimeter is running.
+  // Blink LED's green to indicate that the altimeter is running.
   blinkLEDColors(num_leds, green, 100, 100);
-
 }
 
 void loop() {
   agl = bmp.readAltitude() - read_baseline.field1;
 
-
-  // Light up or blink the LEDs in different patterns depending on altitude.
+  // Light up or blink the LEDs in different colors depending on altitude.
   if (agl > 3500) {
     setLEDColors(num_leds, blue);
   }
