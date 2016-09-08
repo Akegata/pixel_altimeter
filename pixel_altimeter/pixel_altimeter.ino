@@ -32,12 +32,12 @@ int startup             = 0;
 int powercycles;
 double baseline;
 
-struct MyObject {
+struct eeprom_entry {
   double field1;
   byte field2;
   char name[10];
 };
-MyObject read_baseline;
+eeprom_entry read_baseline;
 
 // Sets the specified numbers of LEDs to the specifiedcolor.
 int setLEDColors(int nr_leds, uint32_t color) {
@@ -77,7 +77,6 @@ int blinkLEDColors(int nr_leds, uint32_t color, int on_time, int off_time) {
 }
 
 void setup() {
- 
   strip.begin();
   strip.show();
 
