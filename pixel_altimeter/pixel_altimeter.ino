@@ -2,6 +2,7 @@
 // To do:
 // 1) Detect descent, don't light up LEDs on ascent.
 // 2) Deep sleep power mode.
+// 3) Make an array to handle the different altitudes.
 
 #include <EEPROM.h>
 #include <Wire.h>
@@ -11,7 +12,7 @@
 Adafruit_BMP085 bmp;
 
 #define PIN 2
-int num_leds = 2; // Specified how many LEDs are in the array.
+int num_leds = 1; // Specified how many LEDs are in the array.
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(num_leds, PIN);
 
 // Define different colors for easier use.
@@ -25,7 +26,8 @@ uint32_t white_dim = strip.Color(20, 20, 20);
 uint32_t yellow    = strip.Color(255, 255, 0);
 uint32_t off       = strip.Color(0, 0, 0);
 
-int agl                 = 0;
+//int agl                 = 0;
+int agl                 = 4000;
 int baseline_address    = 1; // Address in the EEPROM where the baseline reading should be stored.
 int powercycles_address = 0;
 int startup             = 0;
@@ -42,7 +44,11 @@ eeprom_entry read_baseline;
 // Sets the specified numbers of LEDs to the specifiedcolor.
 int setLEDColors(int nr_leds, uint32_t color) {
   for (int i = 0; i < nr_leds; i++) {
-    strip.setPixelColor(i, off);
+   strip.setPixelColor(i, off);
+  }
+  strip.show();
+  for (int16_t i = 0; i < nr_leds; i++) {
+    strip.setPixelColor(i, color);
   }
   strip.show();
 }
@@ -107,7 +113,8 @@ void setup() {
 }
 
 void loop() {
-  agl = bmp.readAltitude() - read_baseline.field1;
+  //agl = bmp.readAltitude() - read_baseline.field1;
+  agl = agl - 100;
 
   // Light up or blink the LEDs in different colors depending on altitude.
   if (agl > 3500) {
@@ -126,9 +133,13 @@ void loop() {
     setLEDColors(num_leds, yellow);
   }
   else if (agl < 1500 && agl >= 1000) {
+    blinkLEDColors(num_leds, red, 800, 800);
+  }
+  else if (agl < 1000 && agl >= 700) {
     setLEDColors(num_leds, red);
   }
-  else if (agl < 1000 && agl >= 500) {
-    blinkLEDColors(num_leds, red, 300, 300);
+  else if (agl < 700) {
+    setLEDColors(num_leds, off);
   }
+  delay(500);
 }
