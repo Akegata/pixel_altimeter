@@ -3,6 +3,7 @@
 // 1) Detect descent, don't light up LEDs on ascent.
 // 2) Deep sleep power mode.
 // 3) Make an array to handle the different altitudes.
+//#define simulation
 
 #include <EEPROM.h>
 #include <Wire.h>
@@ -26,8 +27,11 @@ uint32_t white_dim = strip.Color(20, 20, 20);
 uint32_t yellow    = strip.Color(255, 255, 0);
 uint32_t off       = strip.Color(0, 0, 0);
 
-//int agl                 = 0;
-int agl                 = 4000;
+#ifdef simulation
+  int agl                 = 4000; // Set this for simulating a jump
+#else
+  int agl                 = 0;
+#endif
 int baseline_address    = 1; // Address in the EEPROM where the baseline reading should be stored.
 int powercycles_address = 0;
 int startup             = 0;
@@ -113,8 +117,12 @@ void setup() {
 }
 
 void loop() {
-  //agl = bmp.readAltitude() - read_baseline.field1;
-  agl = agl - 100;
+  #ifdef simulation
+    agl = agl - 100;
+    delay(500);
+  #else
+    agl = bmp.readAltitude() - read_baseline.field1;
+  #endif
 
   // Light up or blink the LEDs in different colors depending on altitude.
   if (agl > 3500) {
@@ -141,5 +149,4 @@ void loop() {
   else if (agl < 700) {
     setLEDColors(num_leds, off);
   }
-  delay(500);
 }
