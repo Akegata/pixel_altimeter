@@ -46,42 +46,19 @@ struct eeprom_entry {
 eeprom_entry read_baseline;
 
 // Sets the specified numbers of LEDs to the specifiedcolor.
-int setLEDColors(int nr_leds, uint32_t color) {
-  for (int i = 0; i < nr_leds; i++) {
-   strip.setPixelColor(i, off);
-  }
+int setLEDcolor(uint32_t color) {
+  strip.setPixelColor(0, off);
   strip.show();
-  for (int16_t i = 0; i < nr_leds; i++) {
-    strip.setPixelColor(i, color);
-  }
-  strip.show();
-}
-
-// Cycles through the LED's, only lighting up one LED at a time.
-// If we're only using one LED, this can be scrapped for minimal code size.
-int cycleLEDColors(int nr_leds, uint32_t color, int cycle_time) {
-  setLEDColors(num_leds, off);
-  for (uint16_t i = 0; i < nr_leds; i++) {
-    strip.setPixelColor(i, color);
-    strip.show();
-    delay(cycle_time);
-    strip.setPixelColor(i, off);
-    strip.show();
-  }
+  strip.setPixelColor(0, color);
   strip.show();
 }
 
 // Blinks the specified number of LED's at the specified interval, with the specified color.
-int blinkLEDColors(int nr_leds, uint32_t color, int on_time, int off_time) {
-  for (uint16_t i = 0; i < nr_leds; i++) {
-    strip.setPixelColor(i, color);
-  }
+int blinkLEDcolor(uint32_t color, int on_time, int off_time) {
+  strip.setPixelColor(0, color);
   strip.show();
   delay(on_time);
-
-  for (uint16_t i = 0; i < nr_leds; i++) {
-    strip.setPixelColor(i, off);
-  }
+  strip.setPixelColor(0, off);
   strip.show();
   delay(off_time);
 }
@@ -97,13 +74,13 @@ void setup() {
     baseline = bmp.readAltitude();
     EEPROM.put(baseline_address, baseline);
 
-    blinkLEDColors(num_leds, red, 500, 500);
+    blinkLEDcolor(red, 500, 500);
   }
   // Update the powercycle count.
   else {
     powercycles++;
     EEPROM.write(powercycles_address, powercycles);
-    cycleLEDColors(num_leds, blue, 200);
+    blinkLEDcolor(blue, 200, 200);
     delay(2000);
   }
 
@@ -113,7 +90,7 @@ void setup() {
   EEPROM.get(baseline_address, read_baseline);
 
   // Blink LED's green to indicate that the altimeter is running.
-  blinkLEDColors(num_leds, green, 100, 100);
+  blinkLEDcolor(green, 100, 100);
 }
 
 void loop() {
@@ -126,27 +103,27 @@ void loop() {
 
   // Light up or blink the LEDs in different colors depending on altitude.
   if (agl > 3500) {
-    setLEDColors(num_leds, blue);
+    setLEDcolor(blue);
   }
-  else if (agl < 3500 && agl >= 3000) {
-    blinkLEDColors(num_leds, blue, 800, 800);
+  else if (agl >= 3000) {
+    blinkLEDcolor(blue, 800, 800);
   }
-  else if (agl < 3000 && agl >= 2500) {
-    setLEDColors(num_leds, green);
+  else if (agl >= 2500) {
+    setLEDcolor(green);
   }
-  else if (agl < 2500 && agl >= 2000) {
-    blinkLEDColors(num_leds, green, 800, 800);
+  else if (agl >= 2000) {
+    blinkLEDcolor(green, 800, 800);
   }
-  else if (agl < 2000 && agl >= 1500) {
-    setLEDColors(num_leds, yellow);
+  else if (agl >= 1500) {
+    setLEDcolor(yellow);
   }
-  else if (agl < 1500 && agl >= 1000) {
-    blinkLEDColors(num_leds, red, 800, 800);
+  else if (agl >= 1000) {
+    blinkLEDcolor(red, 800, 800);
   }
-  else if (agl < 1000 && agl >= 700) {
-    setLEDColors(num_leds, red);
+  else if (agl >= 700) {
+    setLEDcolor(red);
   }
-  else if (agl < 700) {
-    setLEDColors(num_leds, off);
+  else {
+    setLEDcolor(off);
   }
 }
