@@ -18,8 +18,12 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(num_leds, PIN);
 
 // Define different colors for easier use.
 uint32_t blue      = strip.Color(0, 0, 255);
+uint32_t cyan      = strip.Color(36, 182, 255);
+uint32_t cyan_dim  = strip.Color(0, 20, 20);
 uint32_t green     = strip.Color(0, 255, 0);
 uint32_t red       = strip.Color(255, 0, 0);
+uint32_t violet    = strip.Color(109, 36, 255);
+uint32_t white_dim = strip.Color(20, 20, 20);
 uint32_t yellow    = strip.Color(255, 255, 0);
 uint32_t off       = strip.Color(0, 0, 0);
 
@@ -42,19 +46,42 @@ struct eeprom_entry {
 eeprom_entry read_baseline;
 
 // Sets the specified numbers of LEDs to the specifiedcolor.
-int setLEDcolor(uint32_t color) {
-  strip.setPixelColor(0, off);
+int setLEDColors(int nr_leds, uint32_t color) {
+  for (int i = 0; i < nr_leds; i++) {
+   strip.setPixelColor(i, off);
+  }
   strip.show();
-  strip.setPixelColor(0, color);
+  for (int16_t i = 0; i < nr_leds; i++) {
+    strip.setPixelColor(i, color);
+  }
+  strip.show();
+}
+
+// Cycles through the LED's, only lighting up one LED at a time.
+// If we're only using one LED, this can be scrapped for minimal code size.
+int cycleLEDColors(int nr_leds, uint32_t color, int cycle_time) {
+  setLEDColors(num_leds, off);
+  for (uint16_t i = 0; i < nr_leds; i++) {
+    strip.setPixelColor(i, color);
+    strip.show();
+    delay(cycle_time);
+    strip.setPixelColor(i, off);
+    strip.show();
+  }
   strip.show();
 }
 
 // Blinks the specified number of LED's at the specified interval, with the specified color.
-int blinkLEDcolor(uint32_t color, int on_time, int off_time) {
-  strip.setPixelColor(0, color);
+int blinkLEDColors(int nr_leds, uint32_t color, int on_time, int off_time) {
+  for (uint16_t i = 0; i < nr_leds; i++) {
+    strip.setPixelColor(i, color);
+  }
   strip.show();
   delay(on_time);
-  strip.setPixelColor(0, off);
+
+  for (uint16_t i = 0; i < nr_leds; i++) {
+    strip.setPixelColor(i, off);
+  }
   strip.show();
   delay(off_time);
 }
@@ -70,13 +97,13 @@ void setup() {
     baseline = bmp.readAltitude();
     EEPROM.put(baseline_address, baseline);
 
-    blinkLEDcolor(red, 500, 500);
+    blinkLEDColors(num_leds, red, 500, 500);
   }
   // Update the powercycle count.
   else {
     powercycles++;
     EEPROM.write(powercycles_address, powercycles);
-    blinkLEDcolor(blue, 200, 200);
+    cycleLEDColors(num_leds, blue, 200);
     delay(2000);
   }
 
@@ -86,7 +113,7 @@ void setup() {
   EEPROM.get(baseline_address, read_baseline);
 
   // Blink LED's green to indicate that the altimeter is running.
-  blinkLEDcolor(green, 100, 100);
+  blinkLEDColors(num_leds, green, 100, 100);
 }
 
 void loop() {
@@ -99,27 +126,27 @@ void loop() {
 
   // Light up or blink the LEDs in different colors depending on altitude.
   if (agl > 3500) {
-    setLEDcolor(blue);
+    setLEDColors(num_leds, blue);
   }
-  else if (agl >= 3000) {
-    blinkLEDcolor(blue, 800, 800);
+  else if (agl < 3500 && agl >= 3000) {
+    blinkLEDColors(num_leds, blue, 800, 800);
   }
-  else if (agl >= 2500) {
-    setLEDcolor(green);
+  else if (agl < 3000 && agl >= 2500) {
+    setLEDColors(num_leds, green);
   }
-  else if (agl >= 2000) {
-    blinkLEDcolor(green, 800, 800);
+  else if (agl < 2500 && agl >= 2000) {
+    blinkLEDColors(num_leds, green, 800, 800);
   }
-  else if (agl >= 1500) {
-    setLEDcolor(yellow);
+  else if (agl < 2000 && agl >= 1500) {
+    setLEDColors(num_leds, yellow);
   }
-  else if (agl >= 1000) {
-    blinkLEDcolor(red, 800, 800);
+  else if (agl < 1500 && agl >= 1000) {
+    blinkLEDColors(num_leds, red, 800, 800);
   }
-  else if (agl >= 700) {
-    setLEDcolor(red);
+  else if (agl < 1000 && agl >= 700) {
+    setLEDColors(num_leds, red);
   }
-  else {
-    setLEDcolor(off);
+  else if (agl < 700) {
+    setLEDColors(num_leds, off);
   }
 }
