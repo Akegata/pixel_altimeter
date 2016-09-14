@@ -13,8 +13,7 @@
 Adafruit_BMP085 bmp;
 
 #define PIN 2
-int num_leds = 1; // Specified how many LEDs are in the array.
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(num_leds, PIN);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(1, PIN);
 
 // Define different colors for easier use.
 uint32_t blue      = strip.Color(0, 0, 255);
