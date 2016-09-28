@@ -3,7 +3,7 @@
 // 1) Detect descent, don't light up LEDs on ascent.
 // 2) Deep sleep power mode.
 // 3) Make an array to handle the different altitudes.
-#define simulation
+//#define simulation
 
 #include <EEPROM.h>
 #include <Wire.h>
@@ -42,8 +42,6 @@ eeprom_entry read_baseline;
 
 // Sets the specified numbers of LEDs to the specifiedcolor.
 int setLEDcolor(uint32_t color) {
-  strip.setPixelColor(0, off);
-  strip.show();
   strip.setPixelColor(0, color);
   strip.show();
 }
@@ -59,6 +57,7 @@ int blinkLEDcolor(uint32_t color, int on_time, int off_time) {
 }
 
 void setup() {
+  bmp.begin();
   strip.begin();
   strip.show();
 
@@ -76,7 +75,7 @@ void setup() {
     powercycles++;
     EEPROM.write(powercycles_address, powercycles);
     blinkLEDcolor(blue, 200, 200);
-    delay(2000);
+    delay(1000);
   }
 
   // Reset the power cycle count and read the baseline from EEPROM.
@@ -97,28 +96,28 @@ void loop() {
   #endif
 
   // Light up or blink the LEDs in different colors depending on altitude.
-  if (agl > 3500) {
+  if (agl > 350) {
     setLEDcolor(blue);
   }
-  else if (agl >= 3000) {
+  else if (agl >= 300) {
     blinkLEDcolor(blue, 800, 800);
   }
-  else if (agl >= 2500) {
+  else if (agl >= 250) {
     setLEDcolor(green);
   }
-  else if (agl >= 2000) {
+  else if (agl >= 200) {
     blinkLEDcolor(green, 800, 800);
   }
-  else if (agl >= 1500) {
+  else if (agl >= 150) {
     setLEDcolor(yellow);
   }
-  else if (agl >= 1000) {
+  else if (agl >= 100) {
     blinkLEDcolor(red, 800, 800);
   }
-  else if (agl >= 700) {
+  else if (agl >= 70) {
     setLEDcolor(red);
   }
   else {
     setLEDcolor(off);
-  }
+  } 
 }
