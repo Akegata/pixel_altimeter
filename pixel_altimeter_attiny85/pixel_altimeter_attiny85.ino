@@ -1,18 +1,20 @@
+
 // LED Skydive Altimeter by Martin Hovmöller
 // To do:
 // 1) Detect descent, don't light up LEDs on ascent.
 // 2) Deep sleep power mode.
 // 3) Make an array to handle the different altitudes.
-//#define simulation
+#define simulation
 
 #include <EEPROM.h>
-#include <Wire.h>
+#include <USI_TWI_Master.h>
+#include <TinyWireM.h>
+#include <tinyBMP085.h>
 #include <Adafruit_NeoPixel.h>
-#include <Adafruit_BMP085.h>
 
-Adafruit_BMP085 bmp;
+tinyBMP085 bmp;
 
-#define PIN 2
+#define PIN 4
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(1, PIN);
 
 // Define different colors for easier use.
@@ -23,12 +25,12 @@ uint32_t yellow    = strip.Color(255, 255, 0);
 uint32_t off       = strip.Color(0, 0, 0);
 
 #ifdef simulation
-  int agl                 = 4000; // Set this for simulating a jump
+uint16_t  agl = 4000;
 #else
-  int agl                 = 0;
+uint16_t agl 0;
 #endif
-int baseline_address    = 1; // Address in the EEPROM where the baseline reading should be stored.
-int powercycles_address = 0;
+uint16_t baseline_address    = 1; // Address in the EEPROM where the baseline reading should be stored.
+uint16_t powercycles_address = 0;
 int startup             = 0;
 int powercycles;
 double baseline;
@@ -65,7 +67,8 @@ void setup() {
 
   // On the third power cycle, reset the calibration
   if (powercycles == 2) {
-    baseline = bmp.readAltitude();
+    int baseline;
+    baseline = bmp.readAltitudeSTDdm();
     EEPROM.put(baseline_address, baseline);
 
     blinkLEDcolor(red, 500, 500);
@@ -82,7 +85,7 @@ void setup() {
   powercycles = (0);
   EEPROM.write(0, powercycles);
   EEPROM.get(baseline_address, read_baseline);
-
+  
   // Blink LED's green to indicate that the altimeter is running.
   blinkLEDcolor(green, 100, 100);
 }
@@ -92,7 +95,7 @@ void loop() {
     agl = agl - 100;
     delay(500);
   #else
-    agl = bmp.readAltitude() - read_baseline.field1;
+    agl = bmp.readAltitudeSTDdm() - read_baseline.field1;
   #endif
 
   // Light up or blink the LEDs in different colors depending on altitude.
