@@ -3,31 +3,16 @@
 // 1) Detect descent, don't light up LEDs on ascent.
 // 2) Deep sleep power mode.
 // 3) Make an array to handle the different altitudes.
-
-
-// attiny85 notes:
-// lfuse = low fuse
-// hfuse = high fuse
-// efuse = extended fuse
-//
-// Reset the fuses:
-// avrdude  -p attiny85 -c usbasp -U efuse:w:0xFF:m -U hfuse:w:0xDF:m -U lfuse:w:0x62:m -v
-
-#define simulation
+//#define simulation
 
 #include <EEPROM.h>
-#include <USI_TWI_Master.h>
-#include <TinyWireM.h>
-#include <tinyBMP085.h>
+#include <Wire.h>
 #include <Adafruit_NeoPixel.h>
-#include <avr/power.h>
-#include "LiquidCrystal_I2C.h"
+#include <Adafruit_BMP085.h>
 
-LiquidCrystal_I2C lcd(0x3F, 16, 2);
+Adafruit_BMP085 bmp;
 
-tinyBMP085 bmp;
-
-#define PIN 0
+#define PIN 2
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(1, PIN);
 
 // Define different colors for easier use.
@@ -38,12 +23,12 @@ uint32_t yellow    = strip.Color(255, 255, 0);
 uint32_t off       = strip.Color(0, 0, 0);
 
 #ifdef simulation
-uint16_t  agl = 4000;
+  int agl                 = 4000; // Set this for simulating a jump
 #else
-uint16_t agl = 10;
+  int agl                 = 0;
 #endif
-uint16_t baseline_address    = 1; // Address in the EEPROM where the baseline reading should be stored.
-uint16_t powercycles_address = 0;
+int baseline_address    = 1; // Address in the EEPROM where the baseline reading should be stored.
+int powercycles_address = 0;
 int startup             = 0;
 int powercycles;
 double baseline;
@@ -72,31 +57,24 @@ int blinkLEDcolor(uint32_t color, int on_time, int off_time) {
 }
 
 void setup() {
-  lcd.init();
-  lcd.backlight();
+/*  Serial.begin(9600);
 
+  if (bmp.begin())
+  Serial.println("BMP180 init success");
+  else {
+    Serial.println("BMP180 init fail (disconnected?)\n\n");
+    while(1);
+  } */
 
-  lcd.setCursor(0, 0);
-  lcd.print("Entering setup");
-//  delay(1000);
-  #ifdef __AVR_ATtiny85__ // Trinket, Gemma, etc.
-  if(F_CPU == 16000000) clock_prescale_set(clock_div_1);
-#endif
-  //if (F_CPU == 8000000) clock_prescale_set(clock_div_1);
-  bmp.begin();
-  strip.setPixelColor(0, off);
+  //<bmp.begin();
   strip.begin();
   strip.show();
- 
-  blinkLEDcolor(green, 200, 200);
-    delay(1000);
 
   powercycles = (EEPROM.read(powercycles_address));
 
   // On the third power cycle, reset the calibration
   if (powercycles == 2) {
-    int baseline;
-    baseline = bmp.readAltitudeSTDdm();
+    baseline = bmp.readAltitude();
     EEPROM.put(baseline_address, baseline);
 
     blinkLEDcolor(red, 500, 500);
@@ -113,43 +91,44 @@ void setup() {
   powercycles = (0);
   EEPROM.write(0, powercycles);
   EEPROM.get(baseline_address, read_baseline);
-  
+
   // Blink LED's green to indicate that the altimeter is running.
   blinkLEDcolor(green, 100, 100);
 }
 
 void loop() {
-  lcd.setCursor(0, 0);
-  lcd.print(agl);
-
   #ifdef simulation
-    agl = agl - 100;
-    delay(500);
+    agl = agl - 2;
+    delay(20);
   #else
-    agl = bmp.readAltitudeSTDdm() - read_baseline.field1;
+    agl = bmp.readAltitude() - read_baseline.field1;
   #endif
 
   // Light up or blink the LEDs in different colors depending on altitude.
-  if (agl > 3500) {
-    setLEDcolor(blue);
+  // Competition window configuration.
+  if (agl > 3300) {
+    setLEDcolor(off);
   }
-  else if (agl >= 3000) {
-    blinkLEDcolor(blue, 800, 800);
-  }
-  else if (agl >= 2500) {
+  else if (agl >= 3200) {
     setLEDcolor(green);
   }
-  else if (agl >= 2000) {
-    blinkLEDcolor(green, 800, 800);
-  }
-  else if (agl >= 1500) {
+  else if (agl >= 3100) {
     setLEDcolor(yellow);
   }
-  else if (agl >= 1000) {
-    blinkLEDcolor(red, 800, 800);
-  }
-  else if (agl >= 700) {
+  else if (agl >= 3000) {
     setLEDcolor(red);
+  }
+  else if (agl >= 2300) {
+    setLEDcolor(off);
+  }
+  else if (agl >= 2200) {
+    setLEDcolor(green);
+  }
+  else if (agl >= 2100) {
+    setLEDcolor(red);
+  }
+  else if (agl >= 2000) {
+    setLEDcolor(off);
   }
   else {
     setLEDcolor(off);

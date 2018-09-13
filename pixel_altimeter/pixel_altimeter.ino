@@ -3,7 +3,7 @@
 // 1) Detect descent, don't light up LEDs on ascent.
 // 2) Deep sleep power mode.
 // 3) Make an array to handle the different altitudes.
-//#define simulation
+#define simulation
 
 #include <EEPROM.h>
 #include <Wire.h>
@@ -57,7 +57,16 @@ int blinkLEDcolor(uint32_t color, int on_time, int off_time) {
 }
 
 void setup() {
-  bmp.begin();
+  Serial.begin(9600);
+
+  if (bmp.begin())
+  Serial.println("BMP180 init success");
+  else {
+    Serial.println("BMP180 init fail (disconnected?)\n\n");
+    while(1);
+  }
+
+  //<bmp.begin();
   strip.begin();
   strip.show();
 
