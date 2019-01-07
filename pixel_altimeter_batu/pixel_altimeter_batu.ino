@@ -21,6 +21,54 @@ uint32_t green     = strip.Color(0, 255, 0);
 uint32_t red       = strip.Color(255, 0, 0);
 uint32_t yellow    = strip.Color(255, 255, 0);
 uint32_t off       = strip.Color(0, 0, 0);
+//
+
+// Set up structure for alarm states.
+#define ONGROUND     1
+#define ARMED        2
+#define ONALTITUDE   4
+#define FREEFALL     8
+#define UNDERCANOPY  16
+#define LANDED       32
+#define NUMBER_OF_ALARMS 6
+#define smoothness 0.35f
+#define numberOfSamplesForCalibration  5
+
+int state = ONGROUND;
+bool onAltitude = false;
+
+float GroundLevelPressure = 1023.35;
+int prevTime = 0;
+float prevAltitude = 0.0f;
+
+
+void freefallAlarm1();
+void freefallAlarm2();
+void freefallAlarm3();
+void canopyAlarm1();
+void canopyAlarm2();
+void canopyAlarm3();
+
+
+typedef void (*alarmPtr)();
+
+typedef struct Alarm
+{
+  bool triggered;
+  float Speed;
+  float Altitude;
+  alarmPtr alarm;
+}_Alarm;
+
+Alarm Alarms[NUMBER_OF_ALARMS]
+{
+  {false, 30, 1525, &freefallAlarm1 },
+  {false, 30, 1100, &freefallAlarm2 },
+  {false, 30,  700, &freefallAlarm3 },
+  {false,  0,  300, &canopyAlarm1 },
+  {false,  0,  200, &canopyAlarm2 },
+  {false,  0,  100, &canopyAlarm3 },
+};
 
 #ifdef simulation
   int agl                 = 4000; // Set this for simulating a jump
@@ -57,16 +105,7 @@ int blinkLEDcolor(uint32_t color, int on_time, int off_time) {
 }
 
 void setup() {
-  Serial.begin(9600);
-
-  if (bmp.begin())
-  Serial.println("BMP180 init success");
-  else {
-    Serial.println("BMP180 init fail (disconnected?)\n\n");
-    while(1);
-  }
-
-  //<bmp.begin();
+  bmp.begin();
   strip.begin();
   strip.show();
 
@@ -103,6 +142,39 @@ void loop() {
   #else
     agl = bmp.readAltitude() - read_baseline.field1;
   #endif
+
+  int currTime = millis();
+  //Calculate deltaTime, since the previous instance
+  int dt = currTime - prevTime;
+  float altitude = getAltitude();
+  float currSpeed = (prevAltitude - altitude) / ((float)(dt) / 1000.0f);
+  prevAltitude = altitude;
+  prevTime = currTime;
+
+  if (state == ONGROUND && altitude > 300)
+  {
+    state = ARMED;
+    armedAlarm();
+  }
+  if (state == ARMED && !onAltitude && altitude > 3500 )
+  {
+    atAltitudeAlarm();
+    onAltitude = true;
+  }
+  else if (state == ARMED && currSpeed > 30)
+  {
+    state = FREEFALL;
+    beep(1000, 3, 50, 300);
+  }
+  else if (state == FREEFALL && currSpeed < 20)
+  {
+    state = UNDERCANOPY;
+  }
+  else if (state == UNDERCANOPY && altitude < 8)
+  {
+    state = LANDED;
+  }
+
 
   // Light up or blink the LEDs in different colors depending on altitude.
   if (agl > 3500) {

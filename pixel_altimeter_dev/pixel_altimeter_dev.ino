@@ -8,12 +8,27 @@
 #include <EEPROM.h>
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h>
-#include <Adafruit_BMP085.h>
+#include <Adafruit_BMP280.h>
+#include <SPI.h>
+#include <Adafruit_Sensor.h>
+#include <LiquidCrystal_I2C.h>
 
-Adafruit_BMP085 bmp;
+LiquidCrystal_I2C lcd(0x27,20,4);
+
+// BMP280 pins
+#define BMP_SCK 6  // SCL (SCK)
+#define BMP_MISO 9 // SDO
+#define BMP_MOSI 7 // SDA (SDI)
+#define BMP_CS 8   // CSB (CS)
+
+//Adafruit_BMP280 bme; // I2C
+//Adafruit_BMP280 bmp(BMP_CS); // hardware SPI
+Adafruit_BMP280 bmp(BMP_CS, BMP_MOSI, BMP_MISO,  BMP_SCK);
 
 #define PIN 2
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(1, PIN);
+
+
 
 // Define different colors for easier use.
 uint32_t blue      = strip.Color(0, 0, 255);
@@ -21,54 +36,6 @@ uint32_t green     = strip.Color(0, 255, 0);
 uint32_t red       = strip.Color(255, 0, 0);
 uint32_t yellow    = strip.Color(255, 255, 0);
 uint32_t off       = strip.Color(0, 0, 0);
-//
-
-// Set up structure for alarm states.
-#define ONGROUND     1
-#define ARMED        2
-#define ONALTITUDE   4
-#define FREEFALL     8
-#define UNDERCANOPY  16
-#define LANDED       32
-#define NUMBER_OF_ALARMS 6
-#define smoothness 0.35f
-#define numberOfSamplesForCalibration  5
-
-int state = ONGROUND;
-bool onAltitude = false;
-
-float GroundLevelPressure = 1023.35;
-int prevTime = 0;
-float prevAltitude = 0.0f;
-
-
-void freefallAlarm1();
-void freefallAlarm2();
-void freefallAlarm3();
-void canopyAlarm1();
-void canopyAlarm2();
-void canopyAlarm3();
-
-
-typedef void (*alarmPtr)();
-
-typedef struct Alarm
-{
-  bool triggered;
-  float Speed;
-  float Altitude;
-  alarmPtr alarm;
-}_Alarm;
-
-Alarm Alarms[NUMBER_OF_ALARMS]
-{
-  {false, 30, 1525, &freefallAlarm1 },
-  {false, 30, 1100, &freefallAlarm2 },
-  {false, 30,  700, &freefallAlarm3 },
-  {false,  0,  300, &canopyAlarm1 },
-  {false,  0,  200, &canopyAlarm2 },
-  {false,  0,  100, &canopyAlarm3 },
-};
 
 #ifdef simulation
   int agl                 = 4000; // Set this for simulating a jump
@@ -105,14 +72,36 @@ int blinkLEDcolor(uint32_t color, int on_time, int off_time) {
 }
 
 void setup() {
-  bmp.begin();
+  Serial.begin(9600);
+  Serial.println(F("BMP280 test"));
+  
+   
+  lcd.init(); 
+  lcd.backlight();
+  lcd.clear();
+  if (!bmp.begin()) {  
+    lcd.print("ERROR, check wiring!");
+    Serial.println("Could not find a valid BMP280 sensor, check wiring!");
+    while (1);
+  }
+
+
+
+
+  //<bmp.begin();
   strip.begin();
   strip.show();
 
   powercycles = (EEPROM.read(powercycles_address));
-
+  lcd.setCursor(0, 0);
+  lcd.print("Powercycles: ");
+  lcd.print(powercycles);
+  
   // On the third power cycle, reset the calibration
   if (powercycles == 2) {
+      lcd.setCursor(0, 0);
+  lcd.print("Altitude: ");
+  lcd.print(bmp.readAltitude());
     baseline = bmp.readAltitude();
     EEPROM.put(baseline_address, baseline);
 
@@ -143,38 +132,40 @@ void loop() {
     agl = bmp.readAltitude() - read_baseline.field1;
   #endif
 
-  int currTime = millis();
-  //Calculate deltaTime, since the previous instance
-  int dt = currTime - prevTime;
-  float altitude = getAltitude();
-  float currSpeed = (prevAltitude - altitude) / ((float)(dt) / 1000.0f);
-  prevAltitude = altitude;
-  prevTime = currTime;
+    lcd.clear();
+    lcd.setCursor(0, 0);
 
-  if (state == ONGROUND && altitude > 300)
-  {
-    state = ARMED;
-    armedAlarm();
-  }
-  if (state == ARMED && !onAltitude && altitude > 3500 )
-  {
-    atAltitudeAlarm();
-    onAltitude = true;
-  }
-  else if (state == ARMED && currSpeed > 30)
-  {
-    state = FREEFALL;
-    beep(1000, 3, 50, 300);
-  }
-  else if (state == FREEFALL && currSpeed < 20)
-  {
-    state = UNDERCANOPY;
-  }
-  else if (state == UNDERCANOPY && altitude < 8)
-  {
-    state = LANDED;
-  }
+        //read altitude
+    lcd.print("Alt diff: ");
+    lcd.print(agl);
+    lcd.print(" m");
+    lcd.setCursor(0, 1);
+  lcd.print("B: ");
+  lcd.print(round(read_baseline.field1));
+  lcd.print(" A: ");
+  lcd.print(round(bmp.readAltitude()));
+  
 
+/* lcd.print("T:");
+  lcd.print(round(bmp.readTemperature()));
+  lcd.print(" P: ");
+  lcd.print(bmp.readPressure()); */
+  
+    
+    Serial.print("Temperature = ");
+    Serial.print(round(bmp.readTemperature()));
+    Serial.println(" *C");
+    
+    Serial.print("Pressure = ");
+    Serial.print(bmp.readPressure());
+    Serial.println(" Pa");
+
+    Serial.print("Approx altitude = ");
+    Serial.print(bmp.readAltitude()); // this should be adjusted to your local forcase
+    Serial.println(" m");
+    
+    Serial.println();
+//    delay(2000);
 
   // Light up or blink the LEDs in different colors depending on altitude.
   if (agl > 3500) {

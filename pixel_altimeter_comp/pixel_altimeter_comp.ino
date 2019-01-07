@@ -57,16 +57,16 @@ int blinkLEDcolor(uint32_t color, int on_time, int off_time) {
 }
 
 void setup() {
-/*  Serial.begin(9600);
+  Serial.begin(9600);
 
-  if (bmp.begin())
+  /*if (bmp.begin())
   Serial.println("BMP180 init success");
   else {
     Serial.println("BMP180 init fail (disconnected?)\n\n");
     while(1);
-  } */
+  }*/
 
-  //<bmp.begin();
+  bmp.begin();
   strip.begin();
   strip.show();
 
@@ -109,11 +109,12 @@ void loop() {
   if (agl > 3300) {
     setLEDcolor(off);
   }
+  
   else if (agl >= 3200) {
     setLEDcolor(green);
   }
   else if (agl >= 3100) {
-    setLEDcolor(yellow);
+    setLEDcolor(blue);
   }
   else if (agl >= 3000) {
     setLEDcolor(red);
