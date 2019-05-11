@@ -8,10 +8,17 @@
 #include <EEPROM.h>
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h>
-#include <Adafruit_BMP085.h>
+#include <Adafruit_BMP280.h>
 
 
-Adafruit_BMP085 bmp;
+
+// BMP280 pins
+#define BMP_SCK 6  // SCL (SCK)
+#define BMP_MISO 9 // SDO
+#define BMP_MOSI 7 // SDA (SDI)
+#define BMP_CS 8   // CSB (CS)
+
+Adafruit_BMP280 bmp(BMP_CS, BMP_MOSI, BMP_MISO,  BMP_SCK);
 
 #define PIN 10
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(1, PIN);
@@ -24,9 +31,9 @@ uint32_t yellow    = strip.Color(255, 255, 0);
 uint32_t off       = strip.Color(0, 0, 0);
 
 #ifdef simulation
-  int agl                 = 4000; // Set this for simulating a jump
+int agl                 = 4000; // Set this for simulating a jump
 #else
-  int agl                 = 0;
+int agl                 = 0;
 #endif
 int baseline_address    = 1; // Address in the EEPROM where the baseline reading should be stored.
 int powercycles_address = 0;
@@ -60,14 +67,14 @@ int blinkLEDcolor(uint32_t color, int on_time, int off_time) {
 void setup() {
   Serial.begin(9600);
 
-  if (bmp.begin())
-  Serial.println("BMP180 init success");
-  else {
+  /*if (bmp.begin())
+    Serial.println("BMP180 init success");
+    else {
     Serial.println("BMP180 init fail (disconnected?)\n\n");
     while(1);
-  }
+    }*/
 
-  //<bmp.begin();
+  bmp.begin();
   strip.begin();
   strip.show();
 
@@ -98,36 +105,41 @@ void setup() {
 }
 
 void loop() {
-  #ifdef simulation
-    agl = agl - 100;
-    delay(500);
-  #else
-    agl = bmp.readAltitude() - read_baseline.field1;
-  #endif
+#ifdef simulation
+  agl = agl - 2;
+  delay(20);
+#else
+  agl = bmp.readAltitude() - read_baseline.field1;
+#endif
 
   // Light up or blink the LEDs in different colors depending on altitude.
-  if (agl > 3500) {
+  // Competition window configuration.
+  if (agl > 3300) {
+    setLEDcolor(off);
+  }
+
+  else if (agl >= 3200) {
+    setLEDcolor(green);
+  }
+  else if (agl >= 3100) {
     setLEDcolor(blue);
   }
   else if (agl >= 3000) {
-    blinkLEDcolor(blue, 800, 800);
+    setLEDcolor(red);
   }
-  else if (agl >= 2500) {
+  else if (agl >= 2300) {
+    setLEDcolor(off);
+  }
+  else if (agl >= 2200) {
     setLEDcolor(green);
   }
-  else if (agl >= 2000) {
-    blinkLEDcolor(green, 800, 800);
-  }
-  else if (agl >= 1500) {
-    setLEDcolor(yellow);
-  }
-  else if (agl >= 1000) {
-    blinkLEDcolor(red, 800, 800);
-  }
-  else if (agl >= 700) {
+  else if (agl >= 2100) {
     setLEDcolor(red);
+  }
+  else if (agl >= 2000) {
+    setLEDcolor(off);
   }
   else {
     setLEDcolor(off);
-  } 
+  }
 }

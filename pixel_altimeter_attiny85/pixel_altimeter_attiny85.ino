@@ -1,47 +1,34 @@
-// LED Skydive Altimeter by Martin Hovmöller
-// To do:
-// 1) Detect descent, don't light up LEDs on ascent.
-// 2) Deep sleep power mode.
-// 3) Make an array to handle the different altitudes.
+// NeoPixel Ring simple sketch (c) 2013 Shae Erisson
+// Released under the GPLv3 license to match the rest of the
+// Adafruit NeoPixel library
 
-
-// attiny85 notes:
-// lfuse = low fuse
-// hfuse = high fuse
-// efuse = extended fuse
-//
-// Reset the fuses:
-// avrdude  -p attiny85 -c usbasp -U efuse:w:0xFF:m -U hfuse:w:0xDF:m -U lfuse:w:0x62:m -v
-
-#define simulation
-
-#include <EEPROM.h>
-#include <USI_TWI_Master.h>
+#include <Adafruit_NeoPixel.h>
+#include <avr/power.h> 
 #include <TinyWireM.h>
 #include <tinyBMP085.h>
-#include <Adafruit_NeoPixel.h>
-#include <avr/power.h>
-#include "LiquidCrystal_I2C.h"
+#include <EEPROM.h>
 
-LiquidCrystal_I2C lcd(0x3F, 16, 2);
 
-tinyBMP085 bmp;
+#define PIXELPIN 4
 
-#define PIN 0
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(1, PIN);
-
-// Define different colors for easier use.
-uint32_t blue      = strip.Color(0, 0, 255);
-uint32_t green     = strip.Color(0, 255, 0);
-uint32_t red       = strip.Color(255, 0, 0);
-uint32_t yellow    = strip.Color(255, 255, 0);
-uint32_t off       = strip.Color(0, 0, 0);
+//#define simulation
 
 #ifdef simulation
 uint16_t  agl = 4000;
 #else
 uint16_t agl = 10;
 #endif
+
+Adafruit_NeoPixel pixels(1, PIXELPIN, NEO_GRB + NEO_KHZ800);
+tinyBMP085 bmp;
+
+// Define different colors for easier use.
+uint32_t blue      = pixels.Color(0, 0, 255);
+uint32_t green     = pixels.Color(0, 255, 0);
+uint32_t red       = pixels.Color(255, 0, 0);
+uint32_t yellow    = pixels.Color(255, 255, 0);
+uint32_t off       = pixels.Color(0, 0, 0);
+
 uint16_t baseline_address    = 1; // Address in the EEPROM where the baseline reading should be stored.
 uint16_t powercycles_address = 0;
 int startup             = 0;
@@ -57,39 +44,25 @@ eeprom_entry read_baseline;
 
 // Sets the specified numbers of LEDs to the specifiedcolor.
 int setLEDcolor(uint32_t color) {
-  strip.setPixelColor(0, color);
-  strip.show();
+  pixels.setPixelColor(0, color);
+  pixels.show();
 }
 
 // Blinks the specified number of LED's at the specified interval, with the specified color.
 int blinkLEDcolor(uint32_t color, int on_time, int off_time) {
-  strip.setPixelColor(0, color);
-  strip.show();
+  pixels.setPixelColor(0, color);
+  pixels.show();
   delay(on_time);
-  strip.setPixelColor(0, off);
-  strip.show();
+  pixels.setPixelColor(0, off);
+  pixels.show();
   delay(off_time);
 }
 
 void setup() {
-  lcd.init();
-  lcd.backlight();
-
-
-  lcd.setCursor(0, 0);
-  lcd.print("Entering setup");
-//  delay(1000);
-  #ifdef __AVR_ATtiny85__ // Trinket, Gemma, etc.
-  if(F_CPU == 16000000) clock_prescale_set(clock_div_1);
-#endif
-  //if (F_CPU == 8000000) clock_prescale_set(clock_div_1);
   bmp.begin();
-  strip.setPixelColor(0, off);
-  strip.begin();
-  strip.show();
- 
-  blinkLEDcolor(green, 200, 200);
-    delay(1000);
+  pixels.setPixelColor(0, off);
+  pixels.begin();
+  pixels.show();
 
   powercycles = (EEPROM.read(powercycles_address));
 
@@ -116,12 +89,10 @@ void setup() {
   
   // Blink LED's green to indicate that the altimeter is running.
   blinkLEDcolor(green, 100, 100);
+    
 }
 
 void loop() {
-  lcd.setCursor(0, 0);
-  lcd.print(agl);
-
   #ifdef simulation
     agl = agl - 100;
     delay(500);
@@ -154,4 +125,5 @@ void loop() {
   else {
     setLEDcolor(off);
   } 
+
 }

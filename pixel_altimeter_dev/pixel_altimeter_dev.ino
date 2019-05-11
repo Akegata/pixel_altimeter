@@ -3,32 +3,40 @@
 // 1) Detect descent, don't light up LEDs on ascent.
 // 2) Deep sleep power mode.
 // 3) Make an array to handle the different altitudes.
-//#define simulation
+
+//#define BMP280 // Use BMP280. If not defined, BMP180 will be used instead.
+#define simulation
 
 #include <EEPROM.h>
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h>
-#include <Adafruit_BMP280.h>
 #include <SPI.h>
 #include <Adafruit_Sensor.h>
 #include <LiquidCrystal_I2C.h>
 
 LiquidCrystal_I2C lcd(0x27,20,4);
 
-// BMP280 pins
-#define BMP_SCK 6  // SCL (SCK)
-#define BMP_MISO 9 // SDO
-#define BMP_MOSI 7 // SDA (SDI)
-#define BMP_CS 8   // CSB (CS)
-
 //Adafruit_BMP280 bme; // I2C
 //Adafruit_BMP280 bmp(BMP_CS); // hardware SPI
-Adafruit_BMP280 bmp(BMP_CS, BMP_MOSI, BMP_MISO,  BMP_SCK);
+#ifdef BMP280
+  #include <Adafruit_BMP280.h>  
 
-#define PIN 2
+  // BMP280 pins
+  #define BMP_SCK 6  // SCL (SCK)
+  #define BMP_MISO 9 // SDO
+  #define BMP_MOSI 7 // SDA (SDI)
+  #define BMP_CS 8   // CSB (CS)
+
+  Adafruit_BMP280 bmp(BMP_CS, BMP_MOSI, BMP_MISO,  BMP_SCK);
+#else
+  #include <Adafruit_BMP085.h>
+  Adafruit_BMP085 bmp;
+#endif
+
+
+#define PIN 10
+//#define PIN 2
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(1, PIN);
-
-
 
 // Define different colors for easier use.
 uint32_t blue      = strip.Color(0, 0, 255);
@@ -70,27 +78,44 @@ int blinkLEDcolor(uint32_t color, int on_time, int off_time) {
   strip.show();
   delay(off_time);
 }
-
+int i = 0;
 void setup() {
-  Serial.begin(9600);
-  Serial.println(F("BMP280 test"));
-  
+
+
+  Serial.begin(9600);  
+
+
    
   lcd.init(); 
+
+  while (i < 200) {
+ digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(300);                       // wait for a second
+  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
+  delay(300); 
+  i++   ;
+}
   lcd.backlight();
+
   lcd.clear();
-  if (!bmp.begin()) {  
-    lcd.print("ERROR, check wiring!");
-    Serial.println("Could not find a valid BMP280 sensor, check wiring!");
-    while (1);
+  if (bmp.begin())
+  Serial.println("Barometer init success");
+  else {
+    Serial.println("Barometer init fail (disconnected?)\n\n");
+    while(1);
   }
-
-
 
 
   //<bmp.begin();
   strip.begin();
   strip.show();
+
+     lcd.print("Setting LED to blue");
+
+    setLEDcolor(blue);
+      delay(5000);
+     lcd.print("LED set to blue");
+
 
   powercycles = (EEPROM.read(powercycles_address));
   lcd.setCursor(0, 0);
@@ -122,9 +147,12 @@ void setup() {
 
   // Blink LED's green to indicate that the altimeter is running.
   blinkLEDcolor(green, 100, 100);
+  
 }
 
 void loop() {
+                   // wait for a second
+
   #ifdef simulation
     agl = agl - 100;
     delay(500);
